@@ -1,5 +1,5 @@
 {
-  "name": "tale-inmobiliaria-backend",
+  "name": "innova-propiedades-backend",
   "version": "1.0.0",
   "description": "API interna para gestión de proyectos inmobiliarios",
   "main": "server.js",

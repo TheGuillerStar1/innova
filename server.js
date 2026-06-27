@@ -62,24 +62,37 @@ const formatArrayField = (val) => {
 };
 
 // ==========================================
-// 1. MÓDULO DE ASESORES
+// 1. MÓDULO DE ASESORES (ACTUALIZADO)
 // ==========================================
 
-app.post('/api/asesores', async (req, res) => {
+// Crear Asesor con Imagen
+app.post('/api/asesores', upload.single('foto_perfil'), async (req, res) => {
     try {
         const data = req.body;
         const newId = generateId8();
+        let fotoUrl = null;
+
+        // Subida de imagen a Cloudflare si existe el archivo
+        if (req.file) {
+            req.file.originalname = `asesor_${newId}${path.extname(req.file.originalname)}`;
+            const uploadResult = await cloudflareStorage.saveFile(req.file, 'asesores'); // Carpeta 'asesores' o la que prefieras
+            fotoUrl = uploadResult.filename;
+        }
+
         const values = {
             id: newId,
             nombre: data.nombre,
             telefono: data.telefono || null,
             email: data.email || null,
             oficina: data.oficina || null,
-            estado: data.estado || 'Activo'
+            estado: data.estado || 'Activo',
+            foto_perfil: fotoUrl
         };
+        
         await db.query('INSERT INTO asesores SET ?', [values]);
         res.json({ success: true, id: newId });
     } catch (error) {
+        console.error("Error creando asesor:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -93,14 +106,29 @@ app.get('/api/asesores', async (req, res) => {
     }
 });
 
-app.put('/api/asesores/:id', async (req, res) => {
+// Editar Asesor con Imagen Opcional
+app.put('/api/asesores/:id', upload.single('foto_perfil'), async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
-        await db.query('UPDATE asesores SET nombre=?, telefono=?, email=?, oficina=?, estado=? WHERE id=?', 
-            [data.nombre, data.telefono, data.email, data.oficina, data.estado, id]);
+        
+        // Obtener el asesor actual para conservar la foto si no se sube una nueva
+        const [current] = await db.query('SELECT foto_perfil FROM asesores WHERE id = ?', [id]);
+        let fotoUrl = current[0]?.foto_perfil || null;
+
+        if (req.file) {
+            req.file.originalname = `asesor_${id}_update${path.extname(req.file.originalname)}`;
+            const uploadResult = await cloudflareStorage.saveFile(req.file, 'asesores');
+            fotoUrl = uploadResult.filename;
+        }
+
+        await db.query(
+            'UPDATE asesores SET nombre=?, telefono=?, email=?, oficina=?, estado=?, foto_perfil=? WHERE id=?', 
+            [data.nombre, data.telefono, data.email, data.oficina, data.estado, fotoUrl, id]
+        );
         res.json({ success: true, id });
     } catch (error) {
+        console.error("Error actualizando asesor:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

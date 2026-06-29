@@ -585,5 +585,26 @@ app.delete('/api/blogs/:id', async (req, res) => {
     }
 });
 
+app.post('/api/upload-media', upload.single('imagen'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No se recibió ninguna imagen.' });
+        }
+ 
+        const uniqueId = crypto.randomUUID().substring(0, 12);
+        req.file.originalname = `blog_content_${uniqueId}_${Date.now()}${path.extname(req.file.originalname)}`;
+ 
+        const uploadResult = await cloudflareStorage.saveFile(req.file, 'blog');
+ 
+        // Ajusta CLOUDFLARE_BASE a la misma base que usas para imagen_principal
+        const url = `https://innova.afygroup.net/principales/${uploadResult.filename}`;
+ 
+        res.json({ success: true, url, filename: uploadResult.filename });
+    } catch (error) {
+        console.error('Error al subir imagen de contenido:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Innova Server corriendo en puerto ${PORT}`));

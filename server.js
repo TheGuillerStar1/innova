@@ -6,6 +6,7 @@ const path = require('path');
 const cors = require('cors');
 const cloudflareStorage = require('./cloudflareStorage');
 const { createClient } = require('redis');
+const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
 const app = express();
 app.use(express.json());
@@ -602,6 +603,49 @@ app.post('/api/upload-media', upload.single('imagen'), async (req, res) => {
         res.json({ success: true, url, filename: uploadResult.filename });
     } catch (error) {
         console.error('Error al subir imagen de contenido:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/media', async (req, res) => {
+    try {
+        const allImages = [];
+        let continuationToken = undefined;
+ 
+        do {
+            const command = new ListObjectsV2Command({
+                Bucket: cloudflareStorage.bucket,       // reutiliza el mismo bucket que ya usas
+                Prefix: 'principales/',                  // ahí es donde caen las imágenes de blog
+                MaxKeys: 1000,
+                ContinuationToken: continuationToken,
+            });
+ 
+            const response = await cloudflareStorage.s3Client.send(command);
+ 
+            const imageExtensions = /\.(jpe?g|png|webp|gif|avif|svg)$/i;
+            const items = (response.Contents || [])
+                .filter((obj) => {
+                    const fileName = obj.Key.split('/').pop() || '';
+                    // Solo imágenes, y solo las que vienen del módulo de blogs
+                    // (originalname empieza con 'blog_', tal como lo arma /api/blogs y /api/upload-media)
+                    return imageExtensions.test(fileName) && fileName.startsWith('blog_');
+                })
+                .map((obj) => ({
+                    key: obj.Key,
+                    url: `${cloudflareStorage.publicUrl}/${obj.Key}`,
+                    size: obj.Size,
+                    lastModified: obj.LastModified,
+                }));
+ 
+            allImages.push(...items);
+            continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+        } while (continuationToken);
+ 
+        allImages.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+ 
+        res.json({ success: true, data: allImages });
+    } catch (error) {
+        console.error('Error al listar imágenes de R2:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

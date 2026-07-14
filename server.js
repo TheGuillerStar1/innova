@@ -200,7 +200,8 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,
-            keywords: data.keywords || null
+            keywords: data.keywords || null,
+            slug: data.slug || null // <-- Guardando el slug en BD
         };
 
         await connection.query('INSERT INTO propiedades SET ?', [values]);
@@ -291,7 +292,8 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,
-            keywords: data.keywords || null
+            keywords: data.keywords || null,
+            slug: data.slug || null // <-- Guardando el slug en BD al editar
         };
 
         await connection.query('UPDATE propiedades SET ? WHERE id = ?', [updateValues, id]);
@@ -322,32 +324,30 @@ app.get('/api/propiedades', async (req, res) => {
     }
 });
 
-app.get('/api/propiedades/:id', async (req, res) => {
+app.get('/api/propiedades/:identifier', async (req, res) => {
+    const connection = await db.getConnection();
     try {
-        const [rows] = await db.query(`
-            SELECT p.*, 
-                   a.nombre as vendedor_nombre, a.telefono as vendedor_telefono, a.email as vendedor_email, a.oficina as vendedor_oficina
-            FROM propiedades p
-            LEFT JOIN asesores a ON p.id_vendedor = a.id
-            WHERE p.id = ?
-        `, [req.params.id]);
+        const { identifier } = req.params;
+        
+        // Modificamos el SELECT para que busque por id o por slug
+        const [rows] = await connection.query(
+            `SELECT p.*, a.nombre as vendedor_nombre, a.telefono as vendedor_telefono, a.foto_perfil as vendedor_foto_perfil 
+             FROM propiedades p 
+             LEFT JOIN asesores a ON p.id_vendedor = a.id 
+             WHERE p.id = ? OR p.slug = ?`, 
+            [identifier, identifier]
+        );
 
-        if (rows.length === 0) return res.status(404).json({ success: false, message: 'Propiedad no encontrada' });
-
-        const propiedad = rows[0];
-        ['lugares_cercanos', 'servicios_basicos'].forEach(campo => {
-            if (propiedad[campo]) {
-                try {
-                    propiedad[campo] = typeof propiedad[campo] === 'string' ? JSON.parse(propiedad[campo]) : propiedad[campo];
-                } catch (e) { propiedad[campo] = []; }
-            } else {
-                propiedad[campo] = [];
-            }
-        });
-
-        res.json({ success: true, data: propiedad });
+        if (rows.length > 0) {
+            res.json({ success: true, data: rows[0] });
+        } else {
+            res.status(404).json({ success: false, error: 'Propiedad no encontrada' });
+        }
     } catch (error) {
+        console.error("Error obteniendo la propiedad:", error);
         res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
     }
 });
 

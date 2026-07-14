@@ -144,10 +144,10 @@ app.delete('/api/asesores/:id', async (req, res) => {
 });
 
 // ==========================================
-// 2. MÓDULO DE PROPIEDADES (Venta & Alquiler)[cite: 2]
+// 2. MÓDULO DE PROPIEDADES (Venta & Alquiler)
 // ==========================================
 
-app.post('/api/propiedades', upload.array('imagenes', 20), async (req, res) => {
+app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -172,6 +172,7 @@ app.post('/api/propiedades', upload.array('imagenes', 20), async (req, res) => {
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
             imagenes: imageUrls,
+            imagenes_descripciones: data.imagenes_descripciones || '[]',
             mapa_direccion: data.mapa_direccion || null,
             latitude: data.latitude ? parseFloat(data.latitude) : null,
             longitude: data.longitude ? parseFloat(data.longitude) : null,
@@ -195,7 +196,7 @@ app.post('/api/propiedades', upload.array('imagenes', 20), async (req, res) => {
             fecha_compra: data.fecha_compra || null,
             orden_imagenes: data.orden_imagenes || null,
             operacion: data.operacion || 'venta',
-            destacada: data.destacada ? 1 : 0,
+            destacada: data.destacada === '1' ? 1 : 0, 
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,
@@ -214,7 +215,7 @@ app.post('/api/propiedades', upload.array('imagenes', 20), async (req, res) => {
     }
 });
 
-app.put('/api/propiedades/:id', upload.array('imagenes', 20), async (req, res) => {
+app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -266,6 +267,7 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 20), async (req, res) =
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
             imagenes: finalImageUrls.join(','),
+            imagenes_descripciones: data.imagenes_descripciones || '[]',
             mapa_direccion: data.mapa_direccion || null,
             latitude: data.latitude ? parseFloat(data.latitude) : null,
             longitude: data.longitude ? parseFloat(data.longitude) : null,
@@ -285,7 +287,7 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 20), async (req, res) =
             lugares_cercanos: formatArrayField(data.lugares_cercanos),
             servicios_basicos: formatArrayField(data.servicios_basicos),
             operacion: data.operacion || 'venta',
-            destacada: data.destacada ? 1 : 0,
+            destacada: data.destacada === '1' ? 1 : 0, 
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,

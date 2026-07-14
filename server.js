@@ -163,6 +163,15 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
         const results = await Promise.all(uploadPromises);
         const imageUrls = results.map(r => r.filename).join(',');
 
+        // 🟢 FIX: Forzar a string para evitar errores de sintaxis en MySQL
+        const safeDescripciones = typeof data.imagenes_descripciones === 'string' 
+            ? data.imagenes_descripciones 
+            : JSON.stringify(data.imagenes_descripciones || []);
+            
+        const safeOrden = typeof data.orden_imagenes === 'string'
+            ? data.orden_imagenes
+            : JSON.stringify(data.orden_imagenes || []);
+
         const values = {
             id: newId,
             tipo: data.tipo,
@@ -172,7 +181,7 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
             imagenes: imageUrls,
-            imagenes_descripciones: data.imagenes_descripciones || '[]',
+            imagenes_descripciones: safeDescripciones,
             mapa_direccion: data.mapa_direccion || null,
             latitude: data.latitude ? parseFloat(data.latitude) : null,
             longitude: data.longitude ? parseFloat(data.longitude) : null,
@@ -194,14 +203,14 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
             lugares_cercanos: formatArrayField(data.lugares_cercanos),
             servicios_basicos: formatArrayField(data.servicios_basicos),
             fecha_compra: data.fecha_compra || null,
-            orden_imagenes: data.orden_imagenes || null,
+            orden_imagenes: safeOrden,
             operacion: data.operacion || 'venta',
             destacada: data.destacada === '1' ? 1 : 0, 
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,
             keywords: data.keywords || null,
-            slug: data.slug || null // <-- Guardando el slug en BD
+            slug: data.slug || null
         };
 
         await connection.query('INSERT INTO propiedades SET ?', [values]);
@@ -260,6 +269,15 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             if (uploadedFilenames.length > 0) finalImageUrls.push(...uploadedFilenames);
         }
 
+        // 🟢 FIX: Forzar a string
+        const safeDescripciones = typeof data.imagenes_descripciones === 'string' 
+            ? data.imagenes_descripciones 
+            : JSON.stringify(data.imagenes_descripciones || []);
+            
+        const safeOrden = typeof data.orden_imagenes === 'string'
+            ? data.orden_imagenes
+            : JSON.stringify(data.orden_imagenes || []);
+
         const updateValues = {
             tipo: data.tipo,
             titulo: data.titulo,
@@ -268,7 +286,7 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
             imagenes: finalImageUrls.join(','),
-            imagenes_descripciones: data.imagenes_descripciones || '[]',
+            imagenes_descripciones: safeDescripciones,
             mapa_direccion: data.mapa_direccion || null,
             latitude: data.latitude ? parseFloat(data.latitude) : null,
             longitude: data.longitude ? parseFloat(data.longitude) : null,
@@ -287,13 +305,15 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             id_vendedor: data.id_vendedor || null,
             lugares_cercanos: formatArrayField(data.lugares_cercanos),
             servicios_basicos: formatArrayField(data.servicios_basicos),
+            fecha_compra: data.fecha_compra || null,
+            orden_imagenes: safeOrden,
             operacion: data.operacion || 'venta',
             destacada: data.destacada === '1' ? 1 : 0, 
             video_url: data.video_url || null,
             seo_title: data.seo_title || null,
             seo_description: data.seo_description || null,
             keywords: data.keywords || null,
-            slug: data.slug || null // <-- Guardando el slug en BD al editar
+            slug: data.slug || null
         };
 
         await connection.query('UPDATE propiedades SET ? WHERE id = ?', [updateValues, id]);

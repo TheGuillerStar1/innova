@@ -163,7 +163,6 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
         const results = await Promise.all(uploadPromises);
         const imageUrls = results.map(r => r.filename).join(',');
 
-        // 🟢 FIX: Forzar a string para evitar errores de sintaxis en MySQL
         const safeDescripciones = typeof data.imagenes_descripciones === 'string' 
             ? data.imagenes_descripciones 
             : JSON.stringify(data.imagenes_descripciones || []);
@@ -176,7 +175,9 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
             id: newId,
             tipo: data.tipo,
             titulo: data.titulo,
-            descripcion_corta: data.descripcion_corta || null,
+            // Límites aplicados
+            descripcion_corta: data.descripcion_corta ? data.descripcion_corta.substring(0, 500) : null,
+            descripcion_larga: data.descripcion_larga ? data.descripcion_larga.substring(0, 2500) : null,
             ubicacion: data.ubicacion || null,
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
@@ -206,11 +207,12 @@ app.post('/api/propiedades', upload.array('imagenes', 30), async (req, res) => {
             orden_imagenes: safeOrden,
             operacion: data.operacion || 'venta',
             destacada: data.destacada === '1' ? 1 : 0, 
-            video_url: data.video_url || null,
-            seo_title: data.seo_title || null,
-            seo_description: data.seo_description || null,
-            keywords: data.keywords || null,
-            slug: data.slug || null
+            // Límites aplicados a campos multimedia y SEO
+            video_url: data.video_url ? data.video_url.substring(0, 300) : null,
+            seo_title: data.seo_title ? data.seo_title.substring(0, 100) : null,
+            seo_description: data.seo_description ? data.seo_description.substring(0, 250) : null,
+            keywords: data.keywords ? data.keywords.substring(0, 250) : null,
+            slug: data.slug ? data.slug.substring(0, 150) : null
         };
 
         await connection.query('INSERT INTO propiedades SET ?', [values]);
@@ -269,7 +271,6 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             if (uploadedFilenames.length > 0) finalImageUrls.push(...uploadedFilenames);
         }
 
-        // 🟢 FIX: Forzar a string
         const safeDescripciones = typeof data.imagenes_descripciones === 'string' 
             ? data.imagenes_descripciones 
             : JSON.stringify(data.imagenes_descripciones || []);
@@ -281,7 +282,9 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
         const updateValues = {
             tipo: data.tipo,
             titulo: data.titulo,
-            descripcion_corta: data.descripcion_corta || null,
+            // Límites aplicados
+            descripcion_corta: data.descripcion_corta ? data.descripcion_corta.substring(0, 500) : null,
+            descripcion_larga: data.descripcion_larga ? data.descripcion_larga.substring(0, 2500) : null,
             ubicacion: data.ubicacion || null,
             precio_soles: data.precio_soles || null,
             precio_dolares: data.precio_dolares || null,
@@ -309,11 +312,12 @@ app.put('/api/propiedades/:id', upload.array('imagenes', 30), async (req, res) =
             orden_imagenes: safeOrden,
             operacion: data.operacion || 'venta',
             destacada: data.destacada === '1' ? 1 : 0, 
-            video_url: data.video_url || null,
-            seo_title: data.seo_title || null,
-            seo_description: data.seo_description || null,
-            keywords: data.keywords || null,
-            slug: data.slug || null
+            // Límites aplicados a campos multimedia y SEO
+            video_url: data.video_url ? data.video_url.substring(0, 300) : null,
+            seo_title: data.seo_title ? data.seo_title.substring(0, 100) : null,
+            seo_description: data.seo_description ? data.seo_description.substring(0, 250) : null,
+            keywords: data.keywords ? data.keywords.substring(0, 250) : null,
+            slug: data.slug ? data.slug.substring(0, 150) : null
         };
 
         await connection.query('UPDATE propiedades SET ? WHERE id = ?', [updateValues, id]);
